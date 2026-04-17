@@ -55,6 +55,105 @@ export type Database = {
           },
         ]
       }
+      billing_profiles: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          id: string
+          ip_country: string | null
+          monthly_amount: number | null
+          pricing_review: boolean
+          risk_flag: string | null
+          selected_currency: string | null
+          selected_pricing_country: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          trial_end: string | null
+          trial_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          ip_country?: string | null
+          monthly_amount?: number | null
+          pricing_review?: boolean
+          risk_flag?: string | null
+          selected_currency?: string | null
+          selected_pricing_country?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          ip_country?: string | null
+          monthly_amount?: number | null
+          pricing_review?: boolean
+          risk_flag?: string | null
+          selected_currency?: string | null
+          selected_pricing_country?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      country_pricing_tiers: {
+        Row: {
+          active: boolean
+          country_code: string
+          country_name: string
+          created_at: string
+          id: string
+          local_amount: number | null
+          local_currency: string | null
+          pricing_tier: string
+          reference_eur_amount: number
+          requires_manual_review: boolean
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          country_code: string
+          country_name: string
+          created_at?: string
+          id?: string
+          local_amount?: number | null
+          local_currency?: string | null
+          pricing_tier: string
+          reference_eur_amount: number
+          requires_manual_review?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          id?: string
+          local_amount?: number | null
+          local_currency?: string | null
+          pricing_tier?: string
+          reference_eur_amount?: number
+          requires_manual_review?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       migration_routes: {
         Row: {
           created_at: string
@@ -102,51 +201,81 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_process_nationality: string | null
+          birth_country: string | null
           budget_range: string | null
           created_at: string
           current_country: string | null
+          current_residence_country: string | null
+          current_spain_status: string | null
+          currently_in_spain: boolean | null
+          eligible_fast_track_nationality: boolean | null
           email: string | null
           eu_status: boolean | null
           family_in_spain: boolean | null
           full_name: string | null
+          has_second_nationality: boolean | null
           id: string
+          intended_route: string | null
           main_goal: string | null
           nationality: string | null
           preferred_language: string | null
+          primary_nationality: string | null
+          second_nationality: string | null
           study_admission: boolean | null
           timeline_goal: string | null
           updated_at: string
           work_offer: boolean | null
         }
         Insert: {
+          active_process_nationality?: string | null
+          birth_country?: string | null
           budget_range?: string | null
           created_at?: string
           current_country?: string | null
+          current_residence_country?: string | null
+          current_spain_status?: string | null
+          currently_in_spain?: boolean | null
+          eligible_fast_track_nationality?: boolean | null
           email?: string | null
           eu_status?: boolean | null
           family_in_spain?: boolean | null
           full_name?: string | null
+          has_second_nationality?: boolean | null
           id: string
+          intended_route?: string | null
           main_goal?: string | null
           nationality?: string | null
           preferred_language?: string | null
+          primary_nationality?: string | null
+          second_nationality?: string | null
           study_admission?: boolean | null
           timeline_goal?: string | null
           updated_at?: string
           work_offer?: boolean | null
         }
         Update: {
+          active_process_nationality?: string | null
+          birth_country?: string | null
           budget_range?: string | null
           created_at?: string
           current_country?: string | null
+          current_residence_country?: string | null
+          current_spain_status?: string | null
+          currently_in_spain?: boolean | null
+          eligible_fast_track_nationality?: boolean | null
           email?: string | null
           eu_status?: boolean | null
           family_in_spain?: boolean | null
           full_name?: string | null
+          has_second_nationality?: boolean | null
           id?: string
+          intended_route?: string | null
           main_goal?: string | null
           nationality?: string | null
           preferred_language?: string | null
+          primary_nationality?: string | null
+          second_nationality?: string | null
           study_admission?: boolean | null
           timeline_goal?: string | null
           updated_at?: string
