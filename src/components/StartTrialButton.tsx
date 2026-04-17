@@ -35,8 +35,7 @@ export function StartTrialButton({
     }
     setLoading(true);
     try {
-      // @ts-expect-error función custom no tipada en types.ts
-      const { data, error } = await supabase.rpc("start_trial_no_card", { _user_id: user.id });
+      const { data, error } = await supabase.rpc("start_trial_no_card" as never, { _user_id: user.id } as never);
       if (error) throw error;
       const result = data as { ok: boolean; error?: string; trial_end?: string; already_active?: boolean };
       if (!result.ok) {
