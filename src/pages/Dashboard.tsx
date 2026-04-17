@@ -45,6 +45,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
+    track("dashboard_viewed");
     (async () => {
       setLoading(true);
       const [{ data: prof }, { data: assess }] = await Promise.all([
