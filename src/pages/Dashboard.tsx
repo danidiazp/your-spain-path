@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LegalDisclaimer } from "@/components/LegalDisclaimer";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
+import { SubscriptionCard } from "@/components/SubscriptionCard";
 import { DocumentChecklist, type RouteDoc, type UserDocState } from "@/components/DocumentChecklist";
 import { RoadmapStages, type RoadmapStep } from "@/components/RoadmapStages";
 import { TaskList, type Task } from "@/components/TaskList";
@@ -211,6 +212,7 @@ const Dashboard = () => {
       <SiteHeader />
       <main className="flex-1 container py-10 lg:py-14 max-w-6xl space-y-7">
         <EmailVerificationBanner />
+        <SubscriptionCard compact />
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
