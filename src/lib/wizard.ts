@@ -13,6 +13,20 @@ export type WizardAnswers = {
 
 export type RouteSlug = "estudios" | "trabajo" | "reagrupacion-familiar";
 
+export type Viability = "alta" | "media" | "baja";
+export type Difficulty = "baja" | "media" | "alta";
+
+export type RouteEvaluation = {
+  slug: RouteSlug;
+  score: number;
+  viability: Viability;
+  difficulty: Difficulty;
+  estimatedTime: string;
+  reason: string;
+  missing: string[];
+  nextSteps: string[];
+};
+
 export type Recommendation = {
   primary: RouteSlug | null;
   alternatives: RouteSlug[];
@@ -20,59 +34,127 @@ export type Recommendation = {
   explanation: string;
   missing: string[];
   isEU: boolean;
+  evaluations: Record<RouteSlug, RouteEvaluation>;
 };
 
 export const ROUTE_LABEL: Record<RouteSlug, string> = {
-  "estudios": "Estancia por estudios",
-  "trabajo": "Autorización de residencia y trabajo",
+  estudios: "Estancia por estudios",
+  trabajo: "Autorización de residencia y trabajo",
   "reagrupacion-familiar": "Reagrupación familiar",
 };
 
+const ROUTE_DEFAULTS: Record<RouteSlug, { time: string; difficulty: Difficulty; baseSteps: string[] }> = {
+  estudios: {
+    time: "2 a 4 meses desde la admisión",
+    difficulty: "media",
+    baseSteps: [
+      "Conseguir o confirmar la carta de admisión del centro educativo en España",
+      "Reunir documentos personales (pasaporte, antecedentes penales apostillados, seguro médico)",
+      "Solicitar cita en el consulado español de tu país de residencia",
+    ],
+  },
+  trabajo: {
+    time: "3 a 8 meses según comunidad autónoma",
+    difficulty: "alta",
+    baseSteps: [
+      "Confirmar oferta firme y que el empleador inicie la solicitud de autorización",
+      "Preparar documentación personal y antecedentes penales apostillados",
+      "Tras la resolución favorable, pedir cita consular para el visado de trabajo",
+    ],
+  },
+  "reagrupacion-familiar": {
+    time: "4 a 9 meses desde la solicitud inicial",
+    difficulty: "media",
+    baseSteps: [
+      "Tu familiar reagrupante debe acreditar residencia legal y medios económicos en España",
+      "Solicitar el informe de habitabilidad de la vivienda en el ayuntamiento",
+      "Presentar la solicitud de reagrupación en la Oficina de Extranjería",
+    ],
+  },
+};
+
+export function evaluate(a: WizardAnswers): Record<RouteSlug, RouteEvaluation> {
+  const ev: Record<RouteSlug, RouteEvaluation> = {} as any;
+
+  // ESTUDIOS
+  {
+    let score = 0;
+    const missing: string[] = [];
+    const reasons: string[] = [];
+    if (a.study_admission === "yes") { score += 60; reasons.push("ya cuentas con admisión académica en España"); }
+    else if (a.main_goal === "study") { score += 25; missing.push("Carta de admisión de un centro educativo español"); reasons.push("tu objetivo es estudiar pero falta confirmar la admisión"); }
+    else if (a.main_goal === "explore") { score += 8; }
+    if (a.budget_range === "low") missing.push("Acreditación de medios económicos suficientes (IPREM mensual)");
+    if (a.timeline_goal === "1-3") score -= 5;
+    if (!a.nationality) missing.push("Confirmar nacionalidad para validar requisitos consulares");
+    ev.estudios = mkEval("estudios", score, missing, reasons.join(" y ") || "encaja parcialmente con tu perfil", a);
+  }
+
+  // TRABAJO
+  {
+    let score = 0;
+    const missing: string[] = [];
+    const reasons: string[] = [];
+    if (a.work_offer === "yes") { score += 60; reasons.push("tienes una oferta firme que activa el procedimiento"); }
+    else if (a.main_goal === "work") { score += 25; missing.push("Oferta de trabajo firme de un empleador en España"); reasons.push("tu objetivo es laboral pero aún sin oferta"); }
+    else if (a.main_goal === "explore") { score += 8; }
+    if (a.budget_range === "low") missing.push("Tasas y trámites pueden requerir presupuesto medio");
+    if (a.timeline_goal === "1-3") score -= 10;
+    ev.trabajo = mkEval("trabajo", score, missing, reasons.join(" y ") || "encaja parcialmente con tu perfil", a);
+  }
+
+  // REAGRUPACIÓN
+  {
+    let score = 0;
+    const missing: string[] = [];
+    const reasons: string[] = [];
+    if (a.family_in_spain === "yes") { score += 55; reasons.push("tienes familiar directo residiendo legalmente en España"); }
+    else if (a.main_goal === "family") { score += 20; missing.push("Familiar directo residiendo legalmente en España"); reasons.push("buscas reunirte con familia pero el familiar aún no reside legalmente"); }
+    else if (a.main_goal === "explore") { score += 5; }
+    if (a.timeline_goal === "1-3") score -= 15;
+    ev["reagrupacion-familiar"] = mkEval("reagrupacion-familiar", score, missing, reasons.join(" y ") || "encaja parcialmente con tu perfil", a);
+  }
+
+  return ev;
+}
+
+function mkEval(slug: RouteSlug, score: number, missing: string[], reason: string, a: WizardAnswers): RouteEvaluation {
+  const def = ROUTE_DEFAULTS[slug];
+  let viability: Viability = "baja";
+  if (score >= 55) viability = "alta";
+  else if (score >= 25) viability = "media";
+
+  // next steps: si faltan cosas, las primeras como acción; si no, baseSteps
+  const nextSteps = missing.length > 0
+    ? [...missing.slice(0, 2), def.baseSteps[0]].slice(0, 3)
+    : def.baseSteps.slice(0, 3);
+
+  return {
+    slug,
+    score: Math.max(0, score),
+    viability,
+    difficulty: def.difficulty,
+    estimatedTime: def.time,
+    reason,
+    missing,
+    nextSteps,
+  };
+}
+
 export function recommend(a: WizardAnswers): Recommendation {
   const isEU = a.eu_status === "yes";
-  const scores: Record<RouteSlug, number> = {
-    "estudios": 0,
-    "trabajo": 0,
-    "reagrupacion-familiar": 0,
-  };
-  const missing: string[] = [];
+  const evaluations = evaluate(a);
 
-  if (a.study_admission === "yes") scores["estudios"] += 60;
-  else if (a.main_goal === "study") {
-    scores["estudios"] += 25;
-    missing.push("Carta de admisión de un centro educativo español");
-  }
+  const ranked = (Object.values(evaluations) as RouteEvaluation[])
+    .sort((x, y) => y.score - x.score)
+    .filter((e) => e.score > 0);
 
-  if (a.work_offer === "yes") scores["trabajo"] += 60;
-  else if (a.main_goal === "work") {
-    scores["trabajo"] += 25;
-    missing.push("Oferta de trabajo firme de un empleador en España");
-  }
-
-  if (a.family_in_spain === "yes") scores["reagrupacion-familiar"] += 55;
-  else if (a.main_goal === "family") {
-    scores["reagrupacion-familiar"] += 20;
-    missing.push("Familiar directo residiendo legalmente en España");
-  }
-
-  // Plazo y presupuesto modulan
-  if (a.timeline_goal === "1-3") {
-    scores["estudios"] -= 5;
-    scores["trabajo"] -= 10;
-    scores["reagrupacion-familiar"] -= 15;
-  }
-  if (a.budget_range === "low") missing.push("Acreditación de medios económicos suficientes");
-
-  const ranked = (Object.entries(scores) as [RouteSlug, number][])
-    .sort((x, y) => y[1] - x[1])
-    .filter(([, v]) => v > 0);
-
-  const primary = ranked[0]?.[0] ?? null;
-  const alternatives = ranked.slice(1, 3).map(([k]) => k);
+  const primary = ranked[0]?.slug ?? null;
+  const alternatives = ranked.slice(1, 3).map((e) => e.slug);
 
   let preparedness: Recommendation["preparedness"] = "bajo";
-  const top = ranked[0]?.[1] ?? 0;
-  if (top >= 60) preparedness = "alto";
+  const top = ranked[0]?.score ?? 0;
+  if (top >= 55) preparedness = "alto";
   else if (top >= 25) preparedness = "medio";
 
   let explanation = "";
@@ -95,7 +177,10 @@ export function recommend(a: WizardAnswers): Recommendation {
     explanation = "Con la información facilitada no podemos sugerir una ruta clara. Te recomendamos explorar las tres vías disponibles para entender cuál encaja mejor con tu situación.";
   }
 
-  return { primary, alternatives, preparedness, explanation, missing, isEU };
+  // Missing agregado: del primary
+  const missing = primary ? evaluations[primary].missing : [];
+
+  return { primary, alternatives, preparedness, explanation, missing, isEU, evaluations };
 }
 
 export const TIMELINE_LABEL: Record<string, string> = {
@@ -109,4 +194,16 @@ export const BUDGET_LABEL: Record<string, string> = {
   low: "Bajo (<2.000 €)",
   medium: "Medio (2.000-6.000 €)",
   high: "Alto (>6.000 €)",
+};
+
+export const VIABILITY_LABEL: Record<Viability, string> = {
+  alta: "Viabilidad alta",
+  media: "Viabilidad media",
+  baja: "Viabilidad baja",
+};
+
+export const DIFFICULTY_LABEL: Record<Difficulty, string> = {
+  baja: "Dificultad baja",
+  media: "Dificultad media",
+  alta: "Dificultad alta",
 };

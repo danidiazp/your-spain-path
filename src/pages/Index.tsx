@@ -56,11 +56,11 @@ const Index = () => {
               <Sparkles className="h-3.5 w-3.5 text-accent" />
               Tu plan migratorio, claro desde el primer paso
             </div>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold leading-[1.05] tracking-tight text-balance">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-semibold leading-[1.1] tracking-tight text-balance pb-1">
               Encuentra tu mejor camino para venir a{" "}
               <span className="relative inline-block">
-                <span className="relative z-10 bg-gradient-primary bg-clip-text text-transparent">España</span>
-                <span className="absolute bottom-1 left-0 right-0 h-3 bg-accent/25 -z-0 rounded-sm" />
+                <span className="absolute inset-x-0 bottom-1 h-3 bg-accent/25 rounded-sm -z-10" aria-hidden />
+                <span className="relative bg-gradient-primary bg-clip-text text-transparent pb-1">España</span>
               </span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 text-pretty">
