@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { SubscriptionCard } from "@/components/SubscriptionCard";
 import { toast } from "sonner";
 
 const Profile = () => {
@@ -49,10 +50,13 @@ const Profile = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SiteHeader />
-      <main className="flex-1 container py-10 lg:py-14 max-w-2xl">
-        <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-1.5">Perfil y ajustes</h1>
-        <p className="text-muted-foreground mb-8">Mantén tu información actualizada para recibir orientación más precisa.</p>
+      <main className="flex-1 container py-10 lg:py-14 max-w-2xl space-y-6">
+        <div>
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-1.5">Perfil y ajustes</h1>
+          <p className="text-muted-foreground">Mantén tu información actualizada para recibir orientación más precisa.</p>
+        </div>
 
+        <SubscriptionCard />
         <div className="bg-card border border-border rounded-3xl p-6 lg:p-8 shadow-elegant space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="full_name">Nombre completo</Label>

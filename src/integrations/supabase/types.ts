@@ -564,6 +564,11 @@ export type Database = {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
       }
+      has_premium_access: {
+        Args: { _env?: string; _user_id: string }
+        Returns: boolean
+      }
+      start_trial_no_card: { Args: { _user_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

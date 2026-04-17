@@ -10,6 +10,8 @@ import { LegalDisclaimer } from "@/components/LegalDisclaimer";
 import { localStore, persistAssessment } from "@/lib/storage";
 import { ROUTE_LABEL, type Recommendation, type RouteSlug, type RouteEvaluation, VIABILITY_LABEL, DIFFICULTY_LABEL } from "@/lib/wizard";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { StartTrialButton } from "@/components/StartTrialButton";
 import { toast } from "sonner";
 
 const VIABILITY_STYLES = {
@@ -113,6 +115,7 @@ const RouteCard = ({ ev, isPrimary }: { ev: RouteEvaluation; isPrimary?: boolean
 const Results = () => {
   const nav = useNavigate();
   const { user } = useAuth();
+  const { isActive } = useSubscription();
   const [result, setResult] = useState<Recommendation | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -247,10 +250,13 @@ const Results = () => {
                     <BookmarkPlus className="h-4 w-4" />
                     {saving ? "Guardando…" : user ? "Guardar en mi dashboard" : "Crear cuenta gratis y guardar"}
                   </Button>
-                  {primaryEval && (
-                    <Button asChild variant="outline" size="lg" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                      <Link to={`/rutas/${primaryEval.slug}`}>Ver detalle de la ruta <ArrowRight className="h-4 w-4" /></Link>
-                    </Button>
+                  {!isActive && (
+                    <StartTrialButton
+                      variant="outline"
+                      size="lg"
+                      label="Activar 7 días gratis sin tarjeta"
+                      redirectTo="/dashboard"
+                    />
                   )}
                 </div>
                 <p className="text-xs opacity-70 pt-1">Sin tarjeta. Sin compromiso. Cancelas cuando quieras.</p>
