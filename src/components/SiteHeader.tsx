@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, LayoutDashboard } from "lucide-react";
+import { LogOut, LayoutDashboard, User } from "lucide-react";
+import { SubscriptionStatusBadge } from "./SubscriptionStatusBadge";
 
 export const SiteHeader = () => {
   const { user, signOut } = useAuth();
@@ -38,8 +39,14 @@ export const SiteHeader = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              <div className="hidden sm:inline-flex">
+                <SubscriptionStatusBadge />
+              </div>
               <Button asChild variant="soft" size="sm" className="hidden sm:inline-flex">
                 <Link to="/dashboard"><LayoutDashboard className="h-4 w-4" />Dashboard</Link>
+              </Button>
+              <Button asChild variant="ghost" size="icon" aria-label="Mi perfil" className="hidden sm:inline-flex">
+                <Link to="/perfil"><User className="h-4 w-4" /></Link>
               </Button>
               <Button variant="ghost" size="icon" onClick={signOut} aria-label="Cerrar sesión">
                 <LogOut className="h-4 w-4" />
