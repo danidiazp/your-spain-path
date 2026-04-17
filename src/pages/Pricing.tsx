@@ -16,6 +16,8 @@ import { COUNTRIES, getCountryFlag, getCountryName } from "@/lib/countries";
 import { TIER_PRICE_ID, getPricingForCountry, convertEurTo, formatLocal, type CountryPricing } from "@/lib/pricing";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { StartTrialButton } from "@/components/StartTrialButton";
+import { useSubscription } from "@/hooks/useSubscription";
 import { toast } from "sonner";
 
 const PLAN_FEATURES = [
@@ -28,6 +30,7 @@ const PLAN_FEATURES = [
 
 const Pricing = () => {
   const { user } = useAuth();
+  const { hasNoCardTrial, isActive, accessSource } = useSubscription();
   const nav = useNavigate();
   const [country, setCountry] = useState<string>("");
   const [pricing, setPricing] = useState<CountryPricing | null>(null);
@@ -177,9 +180,18 @@ const Pricing = () => {
               )}
             </div>
 
-            <Button variant="hero" size="lg" className="w-full" onClick={startCheckout} disabled={!pricing || checkoutOpen}>
-              {checkoutOpen ? "Cargando…" : "Empezar 7 días gratis"} <ArrowRight className="h-4 w-4" />
-            </Button>
+            <div className="space-y-2">
+              <StartTrialButton fullWidth size="lg" label="Empezar 7 días gratis sin tarjeta" />
+              <Button variant="outline" size="lg" className="w-full" onClick={startCheckout} disabled={!pricing || checkoutOpen}>
+                {checkoutOpen ? "Cargando…" : "Suscribirme ahora con tarjeta"} <ArrowRight className="h-4 w-4" />
+              </Button>
+              {accessSource === "trial_no_card" && (
+                <p className="text-xs text-success text-center">Ya tienes tu prueba activa. Puedes suscribirte cuando quieras para no perder acceso.</p>
+              )}
+              {isActive && accessSource === "paid" && (
+                <p className="text-xs text-muted-foreground text-center">Ya tienes una suscripción activa. Gestiónala desde tu perfil.</p>
+              )}
+            </div>
           </div>
 
           {/* Features */}
