@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Check } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Button } from "@/components/ui/button";
 import { HeroGlobe } from "@/components/HeroGlobe";
 import { GraduationCap, Briefcase, Users, ShieldCheck, Compass, ListChecks, Map } from "lucide-react";
+import { StartTrialButton } from "@/components/StartTrialButton";
 import { track } from "@/lib/analytics";
 
 const ROUTES_PREVIEW = [
@@ -216,6 +217,57 @@ const Index = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" className="container py-20 lg:py-28 border-t border-border/60">
+        <div className="text-center mb-12 max-w-2xl mx-auto">
+          <p className="text-sm font-medium text-primary uppercase tracking-[0.18em] mb-3">Plan único</p>
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-balance">
+            Empieza con <span className="text-primary">7 días gratis</span>, sin tarjeta
+          </h2>
+          <p className="text-muted-foreground mt-4">
+            Acceso completo a tu dashboard, checklist documental y recordatorios. Después, suscripción mensual con precio adaptado a tu país.
+          </p>
+        </div>
+        <div className="max-w-2xl mx-auto bg-card border border-border rounded-3xl p-8 lg:p-10 shadow-elegant relative overflow-hidden">
+          <div className="absolute -top-20 -right-20 h-56 w-56 bg-gradient-primary opacity-10 rounded-full blur-3xl" />
+          <div className="relative">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-primary font-medium mb-1">Plan mensual</p>
+                <h3 className="font-display text-2xl font-semibold">Ruta a España</h3>
+              </div>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success/10 text-success text-xs font-medium border border-success/20">
+                <Sparkles className="h-3 w-3" /> 7 días gratis
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2 mb-6">
+              <span className="font-display text-4xl font-semibold">desde 5 €</span>
+              <span className="text-muted-foreground text-sm">/ mes · adaptado a tu país</span>
+            </div>
+            <ul className="grid sm:grid-cols-2 gap-2.5 mb-7">
+              {[
+                "Diagnóstico personalizado",
+                "Checklist documental",
+                "Roadmap por etapas",
+                "Recordatorios con fecha",
+                "Recursos oficiales",
+                "Cancela cuando quieras",
+              ].map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm">
+                  <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" /> {f}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <StartTrialButton fullWidth size="lg" />
+              <Button asChild variant="outline" size="lg">
+                <Link to="/precios">Ver precios por país <ArrowRight className="h-4 w-4" /></Link>
+              </Button>
             </div>
           </div>
         </div>
