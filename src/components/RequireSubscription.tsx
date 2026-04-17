@@ -10,7 +10,10 @@ export function RequireSubscription({ children }: { children: ReactNode }) {
   const { isActive, loading: subLoading } = useSubscription();
   const location = useLocation();
 
-  if (authLoading || subLoading) {
+  // Solo bloqueamos por auth. Si la consulta de subscripción falla o tarda,
+  // no dejamos al usuario en pantalla en blanco: el sub-loading se renderiza
+  // dentro del propio Dashboard si hace falta.
+  if (authLoading) {
     return (
       <div className="min-h-screen grid place-items-center">
         <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -20,6 +23,15 @@ export function RequireSubscription({ children }: { children: ReactNode }) {
 
   if (!user) {
     return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+
+  // Mientras carga la subscripción, mostramos un spinner ligero (no en blanco).
+  if (subLoading) {
+    return (
+      <div className="min-h-screen grid place-items-center">
+        <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
   }
 
   if (!isActive) {

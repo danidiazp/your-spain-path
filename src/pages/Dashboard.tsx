@@ -52,44 +52,59 @@ const Dashboard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     track("dashboard_viewed");
+    let cancelled = false;
     (async () => {
       setLoading(true);
-      const [{ data: prof }, { data: assess }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase.from("assessment_results").select("*").eq("profile_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      setProfile(prof);
-      setAssessment(assess);
-
-      if (assess?.primary_route_id) {
-        const [{ data: r }, { data: s }, { data: d }, { data: res }, { data: ds }] = await Promise.all([
-          supabase.from("migration_routes").select("id, slug, name, short_description, estimated_timeline, risk_notes").eq("id", assess.primary_route_id).maybeSingle(),
-          supabase.from("route_steps").select("id, step_order, title, description, estimated_duration, stage_location, official_link").eq("route_id", assess.primary_route_id).order("step_order"),
-          supabase.from("route_documents").select("id, name, description, required, translation_needed, apostille_needed, official_link, validity_window, issued_by").eq("route_id", assess.primary_route_id),
-          supabase.from("resources").select("id, title, url, institution, category").eq("route_id", assess.primary_route_id).limit(8),
-          supabase.from("user_documents").select("id, document_id, status, notes").eq("profile_id", user.id),
+      setLoadError(null);
+      try {
+        const [profRes, assessRes] = await Promise.all([
+          supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+          supabase.from("assessment_results").select("*").eq("profile_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
-        setRoute(r);
-        setSteps(s ?? []);
-        setDocs(d ?? []);
-        setResources(res ?? []);
-        const map: Record<string, UserDocState> = {};
-        (ds ?? []).forEach((row: any) => { map[row.document_id] = { id: row.id, document_id: row.document_id, status: row.status, notes: row.notes }; });
-        setDocStates(map);
-      }
+        if (cancelled) return;
+        const prof = profRes.data;
+        const assess = assessRes.data as Assessment | null;
+        setProfile(prof);
+        setAssessment(assess);
 
-      const { data: t } = await supabase
-        .from("user_tasks")
-        .select("id, title, status, description, source_step_id, due_date")
-        .eq("profile_id", user.id)
-        .order("created_at");
-      setTasks((t ?? []) as Task[]);
-      setLoading(false);
+        if (assess?.primary_route_id) {
+          const [rRes, sRes, dRes, resRes, dsRes] = await Promise.all([
+            supabase.from("migration_routes").select("id, slug, name, short_description, estimated_timeline, risk_notes").eq("id", assess.primary_route_id).maybeSingle(),
+            supabase.from("route_steps").select("id, step_order, title, description, estimated_duration, stage_location, official_link").eq("route_id", assess.primary_route_id).order("step_order"),
+            supabase.from("route_documents").select("id, name, description, required, translation_needed, apostille_needed, official_link, validity_window, issued_by").eq("route_id", assess.primary_route_id),
+            supabase.from("resources").select("id, title, url, institution, category").eq("route_id", assess.primary_route_id).limit(8),
+            supabase.from("user_documents").select("id, document_id, status, notes").eq("profile_id", user.id),
+          ]);
+          if (cancelled) return;
+          setRoute(rRes.data as Route | null);
+          setSteps((sRes.data ?? []) as RoadmapStep[]);
+          setDocs((dRes.data ?? []) as RouteDoc[]);
+          setResources((resRes.data ?? []) as Resource[]);
+          const map: Record<string, UserDocState> = {};
+          (dsRes.data ?? []).forEach((row: any) => { map[row.document_id] = { id: row.id, document_id: row.document_id, status: row.status, notes: row.notes }; });
+          setDocStates(map);
+        }
+
+        const tRes = await supabase
+          .from("user_tasks")
+          .select("id, title, status, description, source_step_id, due_date")
+          .eq("profile_id", user.id)
+          .order("created_at");
+        if (cancelled) return;
+        setTasks(((tRes.data ?? []) as Task[]));
+      } catch (e: any) {
+        console.error("dashboard load error", e);
+        if (!cancelled) setLoadError(e?.message ?? "Error cargando tu dashboard");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
+    return () => { cancelled = true; };
   }, [user]);
 
   const seedTasksFromRoute = async () => {
@@ -146,8 +161,27 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center">
-        <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <div className="min-h-screen flex flex-col bg-background">
+        <SiteHeader />
+        <div className="flex-1 grid place-items-center">
+          <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <SiteHeader />
+        <main className="flex-1 container max-w-2xl py-20 text-center space-y-6">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-destructive/10 grid place-items-center">
+            <AlertCircle className="h-7 w-7 text-destructive" />
+          </div>
+          <h1 className="font-display text-2xl font-semibold">No pudimos cargar tu dashboard</h1>
+          <p className="text-muted-foreground text-sm">{loadError}</p>
+          <Button onClick={() => window.location.reload()} variant="hero">Reintentar</Button>
+        </main>
       </div>
     );
   }
