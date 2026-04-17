@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { LegalDisclaimer } from "@/components/LegalDisclaimer";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 
 type Assessment = {
   id: string;
@@ -152,6 +154,7 @@ const Dashboard = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <SiteHeader />
       <main className="flex-1 container py-10 lg:py-14 max-w-6xl space-y-8">
+        <EmailVerificationBanner />
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
