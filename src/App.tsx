@@ -42,10 +42,11 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/precios" element={<Pricing />} />
               <Route path="/checkout/return" element={<CheckoutReturn />} />
-              {/* Premium-gated: requiere trial activo o suscripción */}
+              {/* Premium-gated: solo el dashboard requiere trial/suscripción */}
               <Route path="/dashboard" element={<RequireSubscription><Dashboard /></RequireSubscription>} />
-              <Route path="/rutas/:slug" element={<RequireSubscription><RouteDetail /></RequireSubscription>} />
-              <Route path="/recursos" element={<RequireSubscription><Resources /></RequireSubscription>} />
+              {/* Contenido público — accesible sin pago para marketing y SEO */}
+              <Route path="/rutas/:slug" element={<RouteDetail />} />
+              <Route path="/recursos" element={<Resources />} />
               {/* Solo requiere login */}
               <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
