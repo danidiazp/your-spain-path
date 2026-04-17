@@ -188,6 +188,14 @@ const Results = () => {
         </section>
 
         <div className="container py-10 lg:py-12 max-w-5xl space-y-8">
+          {/* Fast-track nacionalidad iberoamericana */}
+          {result.fastTrackNationality && result.fastTrackMessage && (
+            <div className="bg-success/10 border border-success/30 rounded-3xl p-6">
+              <p className="text-xs uppercase tracking-wider text-success font-semibold mb-2">Buenas noticias para tu nacionalidad</p>
+              <p className="text-sm leading-relaxed">{result.fastTrackMessage}</p>
+            </div>
+          )}
+
           {/* EU notice */}
           {result.isEU && (
             <div className="bg-accent-soft/50 border border-accent/30 rounded-3xl p-6">
