@@ -28,42 +28,50 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!user) { setSub(null); setBilling(null); setLoading(false); return; }
-    const env = getStripeEnvironment();
-    const [{ data: subData }, { data: billData }] = await Promise.all([
-      supabase
-        .from("subscriptions")
-        .select("status, current_period_end, cancel_at_period_end, price_id, stripe_customer_id")
-        .eq("user_id", user.id)
-        .eq("environment", env)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("billing_profiles")
-        .select("trial_start, trial_end, subscription_status, selected_pricing_country, monthly_amount, selected_currency")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ]);
-    setSub((subData as SubscriptionRow) ?? null);
-    setBilling((billData as BillingProfileRow) ?? null);
-    setLoading(false);
+    if (!user) {
+      setSub(null);
+      setBilling(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const env = getStripeEnvironment();
+      const [{ data: subData, error: subError }, { data: billData, error: billError }] = await Promise.all([
+        supabase
+          .from("subscriptions")
+          .select("status, current_period_end, cancel_at_period_end, price_id, stripe_customer_id")
+          .eq("user_id", user.id)
+          .eq("environment", env)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("billing_profiles")
+          .select("trial_start, trial_end, subscription_status, selected_pricing_country, monthly_amount, selected_currency")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
+
+      if (subError) throw subError;
+      if (billError) throw billError;
+
+      setSub((subData as SubscriptionRow) ?? null);
+      setBilling((billData as BillingProfileRow) ?? null);
+    } catch (error) {
+      console.warn("[useSubscription] refresh failed", error);
+      setSub(null);
+      setBilling(null);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    refresh().then(() => { if (cancelled) return; });
-
-    if (!user) return;
-    const channel = supabase
-      .channel(`access-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` }, () => refresh())
-      .on("postgres_changes", { event: "*", schema: "public", table: "billing_profiles", filter: `user_id=eq.${user.id}` }, () => refresh())
-      .subscribe();
-
-    return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [user, refresh]);
+    refresh();
+  }, [refresh]);
 
   // Acceso por suscripción de pago
   const hasPaidAccess = !!sub && (
