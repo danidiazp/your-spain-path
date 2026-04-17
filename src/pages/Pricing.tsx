@@ -1,9 +1,9 @@
 // Página de selección de plan + checkout embebido.
-// El precio se determina por la nacionalidad activa del usuario (active_process_nationality).
+// Diseñada para NUNCA quedarse en blanco: cada bloque tiene fallback de error.
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check, Globe, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { Check, Globe, Sparkles, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -28,46 +28,90 @@ const PLAN_FEATURES = [
   "Acceso a fuentes oficiales y actualizaciones",
 ];
 
+// Precio por defecto (fallback estándar) si el país no tiene configuración.
+const FALLBACK_PRICING: CountryPricing = {
+  country_code: "XX",
+  country_name: "Internacional",
+  pricing_tier: "B",
+  reference_eur_amount: 5,
+  local_currency: "EUR",
+  local_amount: null,
+};
+
 const Pricing = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { hasNoCardTrial, isActive, accessSource } = useSubscription();
   const nav = useNavigate();
   const [country, setCountry] = useState<string>("");
   const [pricing, setPricing] = useState<CountryPricing | null>(null);
+  const [usedFallback, setUsedFallback] = useState(false);
   const [localApprox, setLocalApprox] = useState<string | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Cargar país por defecto desde profile
+  // Cargar país por defecto desde profile (si hay user)
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("active_process_nationality, primary_nationality")
-        .eq("id", user.id)
-        .maybeSingle();
-      const def = data?.active_process_nationality ?? data?.primary_nationality ?? "";
-      if (def) setCountry(def);
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("active_process_nationality, primary_nationality")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (cancelled) return;
+        const def = data?.active_process_nationality ?? data?.primary_nationality ?? "";
+        if (def) setCountry(def);
+      } catch (e) {
+        console.error("profile fetch failed", e);
+        // No bloquea: el usuario puede seleccionar país manualmente
+      }
     })();
+    return () => { cancelled = true; };
   }, [user]);
 
-  // Cuando cambia país, cargar pricing + conversión
+  // Cuando cambia país, cargar pricing + conversión (con fallback)
   useEffect(() => {
-    if (!country) { setPricing(null); setLocalApprox(null); return; }
+    if (!country) { setPricing(null); setLocalApprox(null); setUsedFallback(false); return; }
+    let cancelled = false;
     (async () => {
       setLoadingPrice(true);
-      const p = await getPricingForCountry(country);
-      setPricing(p);
-      if (p && p.local_currency && p.local_currency !== "EUR") {
-        const local = await convertEurTo(p.local_currency, p.reference_eur_amount);
-        setLocalApprox(local != null ? formatLocal(local, p.local_currency) : null);
-      } else {
-        setLocalApprox(null);
+      try {
+        const p = await getPricingForCountry(country);
+        if (cancelled) return;
+        if (p) {
+          setPricing(p);
+          setUsedFallback(false);
+          if (p.local_currency && p.local_currency !== "EUR") {
+            try {
+              const local = await convertEurTo(p.local_currency, p.reference_eur_amount);
+              if (!cancelled) setLocalApprox(local != null ? formatLocal(local, p.local_currency) : null);
+            } catch {
+              if (!cancelled) setLocalApprox(null);
+            }
+          } else {
+            setLocalApprox(null);
+          }
+        } else {
+          // Fallback estándar — nunca dejamos al usuario sin precio
+          setPricing(FALLBACK_PRICING);
+          setUsedFallback(true);
+          setLocalApprox(null);
+        }
+      } catch (e) {
+        console.error("pricing load failed", e);
+        if (!cancelled) {
+          setPricing(FALLBACK_PRICING);
+          setUsedFallback(true);
+          setLocalApprox(null);
+        }
+      } finally {
+        if (!cancelled) setLoadingPrice(false);
       }
-      setLoadingPrice(false);
     })();
+    return () => { cancelled = true; };
   }, [country]);
 
   const startCheckout = () => {
@@ -83,7 +127,7 @@ const Pricing = () => {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           priceId,
-          selectedPricingCountry: country,
+          selectedPricingCountry: country || pricing!.country_code,
           environment: getStripeEnvironment(),
           returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
         },
@@ -169,12 +213,15 @@ const Pricing = () => {
                       Aprox. <span className="font-medium text-foreground">{localApprox}</span> en tu moneda local · referencia.
                     </p>
                   )}
+                  {usedFallback && (
+                    <p className="text-xs text-warning mt-2 inline-flex items-center gap-1.5">
+                      <AlertCircle className="h-3 w-3" /> Aplicando precio estándar internacional.
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-3">
                     Comienza con 7 días de prueba gratis. Después del trial, se cobra automáticamente. Cancela en cualquier momento.
                   </p>
                 </>
-              ) : country ? (
-                <p className="text-sm text-muted-foreground">No hay pricing configurado para este país todavía.</p>
               ) : (
                 <p className="text-sm text-muted-foreground">Selecciona un país para ver tu precio.</p>
               )}
@@ -182,7 +229,7 @@ const Pricing = () => {
 
             <div className="space-y-2">
               <StartTrialButton fullWidth size="lg" label="Empezar 7 días gratis sin tarjeta" />
-              <Button variant="outline" size="lg" className="w-full" onClick={startCheckout} disabled={!pricing || checkoutOpen}>
+              <Button variant="outline" size="lg" className="w-full" onClick={startCheckout} disabled={!pricing || checkoutOpen || authLoading}>
                 {checkoutOpen ? "Cargando…" : "Suscribirme ahora con tarjeta"} <ArrowRight className="h-4 w-4" />
               </Button>
               {accessSource === "trial_no_card" && (
