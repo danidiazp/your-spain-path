@@ -61,6 +61,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <PaymentTestModeBanner />
+          <TrialBanner />
           <RoutedShell />
         </AuthProvider>
       </BrowserRouter>
