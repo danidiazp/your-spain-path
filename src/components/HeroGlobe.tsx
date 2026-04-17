@@ -25,20 +25,44 @@ const POINTS = [
   ...ARCS.map((a) => ({ lat: a.startLat, lng: a.startLng, label: a.label, size: 0.4, color: "hsl(188, 60%, 35%)" })),
 ];
 
+const StaticFallback = () => (
+  <div className="relative w-full aspect-square max-w-[600px] mx-auto">
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-accent/15 rounded-full blur-3xl" />
+    <div className="absolute inset-6 rounded-full bg-gradient-to-br from-secondary via-card to-accent-soft border border-border shadow-elegant grid place-items-center">
+      <div className="text-center space-y-2 px-6">
+        <div className="text-6xl">🌍</div>
+        <p className="font-display text-xl font-semibold text-primary">Tu camino a España</p>
+        <p className="text-xs text-muted-foreground">Conectando perfiles globales con vías oficiales</p>
+      </div>
+    </div>
+  </div>
+);
+
 export const HeroGlobe = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<any>(null);
   const [GlobeComp, setGlobeComp] = useState<any>(null);
   const [size, setSize] = useState({ w: 600, h: 600 });
+  const [shouldRender, setShouldRender] = useState<boolean | null>(null);
 
-  // Lazy import to avoid blocking initial render
+  // Decide if 3D globe should render: skip on small screens, reduced motion, or no canvas.
   useEffect(() => {
-    let mounted = true;
-    import("react-globe.gl").then((m) => {
-      if (mounted) setGlobeComp(() => m.default);
-    });
-    return () => { mounted = false; };
+    if (typeof window === "undefined") return;
+    const isSmall = window.matchMedia("(max-width: 768px)").matches;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setShouldRender(!isSmall && !reduced);
   }, []);
+
+  // Lazy import only when we will render
+  useEffect(() => {
+    if (!shouldRender) return;
+    let mounted = true;
+    // Defer to idle to avoid blocking first paint
+    const load = () => import("react-globe.gl").then((m) => { if (mounted) setGlobeComp(() => m.default); });
+    if ("requestIdleCallback" in window) (window as any).requestIdleCallback(load, { timeout: 1500 });
+    else setTimeout(load, 200);
+    return () => { mounted = false; };
+  }, [shouldRender]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -63,9 +87,10 @@ export const HeroGlobe = () => {
     globeRef.current.pointOfView({ lat: 25, lng: -10, altitude: 2.2 }, 0);
   }, [GlobeComp]);
 
+  if (shouldRender === false) return <StaticFallback />;
+
   return (
     <div ref={containerRef} className="globe-container relative w-full aspect-square max-w-[600px] mx-auto">
-      {/* Soft glow backdrop */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 rounded-full blur-3xl" />
       {GlobeComp ? (
         <GlobeComp
