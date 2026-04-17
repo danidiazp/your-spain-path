@@ -80,11 +80,17 @@ export const HeroGlobe = () => {
     if (!globeRef.current) return;
     const controls = globeRef.current.controls();
     if (controls) {
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.45;
+      controls.autoRotate = false; // Empieza quieto, enfoca España
+      controls.autoRotateSpeed = 0.25;
       controls.enableZoom = false;
     }
-    globeRef.current.pointOfView({ lat: 25, lng: -10, altitude: 2.2 }, 0);
+    // Foco inicial: Madrid / Europa occidental
+    globeRef.current.pointOfView({ lat: 40.4168, lng: -3.7038, altitude: 2.0 }, 0);
+    // Activa rotación suave después de 2.5s para no robar protagonismo al titular
+    const t = setTimeout(() => {
+      if (controls) controls.autoRotate = true;
+    }, 2500);
+    return () => clearTimeout(t);
   }, [GlobeComp]);
 
   if (shouldRender === false) return <StaticFallback />;
