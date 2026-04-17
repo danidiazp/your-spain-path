@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, Circle, ArrowRight, FileText, Calendar, MapPin, BookOpen, Sparkles, AlertCircle, ListChecks, Plus, ExternalLink, Target, Trash2 } from "lucide-react";
+import { CheckCircle2, Circle, Check, ArrowRight, FileText, Calendar, MapPin, BookOpen, Sparkles, AlertCircle, ListChecks, Plus, ExternalLink, Target, Trash2 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Button } from "@/components/ui/button";
