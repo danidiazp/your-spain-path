@@ -17,20 +17,30 @@ const RouteDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data: r } = await supabase.from("migration_routes").select("*").eq("slug", slug!).maybeSingle();
-      if (r) {
-        const [{ data: s }, { data: d }] = await Promise.all([
-          supabase.from("route_steps").select("*").eq("route_id", r.id).order("step_order"),
-          supabase.from("route_documents").select("*").eq("route_id", r.id),
-        ]);
-        setSteps(s ?? []);
-        setDocs(d ?? []);
+      try {
+        const { data: r } = await supabase.from("migration_routes").select("*").eq("slug", slug!).maybeSingle();
+        if (cancelled) return;
+        if (r) {
+          const [{ data: s }, { data: d }] = await Promise.all([
+            supabase.from("route_steps").select("*").eq("route_id", r.id).order("step_order"),
+            supabase.from("route_documents").select("*").eq("route_id", r.id),
+          ]);
+          if (cancelled) return;
+          setSteps(s ?? []);
+          setDocs(d ?? []);
+        }
+        setRoute(r);
+      } catch (e) {
+        console.error("route detail load error", e);
+        if (!cancelled) setRoute(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setRoute(r);
-      setLoading(false);
     })();
+    return () => { cancelled = true; };
   }, [slug]);
 
   if (loading) {

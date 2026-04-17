@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 
 // Origen → Madrid (lat 40.4168, lon -3.7038)
 const ARCS = [
@@ -38,7 +38,7 @@ const StaticFallback = () => (
   </div>
 );
 
-export const HeroGlobe = () => {
+export const HeroGlobe = forwardRef<HTMLDivElement>((_, _externalRef) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<any>(null);
   const [GlobeComp, setGlobeComp] = useState<any>(null);
@@ -126,4 +126,6 @@ export const HeroGlobe = () => {
       )}
     </div>
   );
-};
+});
+HeroGlobe.displayName = "HeroGlobe";
+
