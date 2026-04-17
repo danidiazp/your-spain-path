@@ -1,23 +1,99 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, AlertCircle, Sparkles, BookmarkPlus } from "lucide-react";
+import { ArrowRight, Check, AlertCircle, Sparkles, BookmarkPlus, Clock, Gauge, Target, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { LegalDisclaimer } from "@/components/LegalDisclaimer";
-import { localStore } from "@/lib/storage";
-import { ROUTE_LABEL, type Recommendation, type RouteSlug } from "@/lib/wizard";
+import { localStore, persistAssessment } from "@/lib/storage";
+import { ROUTE_LABEL, type Recommendation, type RouteSlug, type RouteEvaluation, VIABILITY_LABEL, DIFFICULTY_LABEL } from "@/lib/wizard";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const PREP_STYLES = {
-  alto: { label: "Preparación alta", className: "bg-success/15 text-success border-success/30" },
-  medio: { label: "Preparación media", className: "bg-warning/15 text-warning border-warning/30" },
-  bajo: { label: "Preparación inicial", className: "bg-secondary text-secondary-foreground border-border" },
+const VIABILITY_STYLES = {
+  alta: "bg-success/15 text-success border-success/30",
+  media: "bg-warning/15 text-warning border-warning/30",
+  baja: "bg-muted text-muted-foreground border-border",
 } as const;
+
+const DIFFICULTY_STYLES = {
+  baja: "bg-success/10 text-success border-success/20",
+  media: "bg-warning/10 text-warning border-warning/20",
+  alta: "bg-destructive/10 text-destructive border-destructive/20",
+} as const;
+
+const PREP_LABEL = {
+  alto: "Preparación alta",
+  medio: "Preparación media",
+  bajo: "Preparación inicial",
+} as const;
+
+const RouteCard = ({ ev, isPrimary }: { ev: RouteEvaluation; isPrimary?: boolean }) => (
+  <div className={`bg-card border rounded-3xl p-6 lg:p-7 transition-all hover:shadow-elegant ${isPrimary ? "border-primary/40 shadow-elegant" : "border-border"}`}>
+    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div>
+        {isPrimary && <p className="text-xs uppercase tracking-[0.18em] text-primary font-medium mb-1.5">Ruta principal</p>}
+        {!isPrimary && <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Alternativa</p>}
+        <h3 className="font-display text-xl lg:text-2xl font-semibold">{ROUTE_LABEL[ev.slug]}</h3>
+      </div>
+      <Badge variant="outline" className={`${VIABILITY_STYLES[ev.viability]} text-xs font-medium`}>
+        {VIABILITY_LABEL[ev.viability]}
+      </Badge>
+    </div>
+
+    <p className="text-sm text-muted-foreground leading-relaxed mb-5">Encaja porque {ev.reason}.</p>
+
+    <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="bg-secondary/60 rounded-xl p-3">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <Clock className="h-3 w-3" /> Tiempo orientativo
+        </div>
+        <p className="text-sm font-medium leading-tight">{ev.estimatedTime}</p>
+      </div>
+      <div className="bg-secondary/60 rounded-xl p-3">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <Gauge className="h-3 w-3" /> Dificultad
+        </div>
+        <Badge variant="outline" className={`${DIFFICULTY_STYLES[ev.difficulty]} text-xs`}>{DIFFICULTY_LABEL[ev.difficulty]}</Badge>
+      </div>
+    </div>
+
+    {ev.missing.length > 0 && (
+      <div className="mb-5">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+          <AlertCircle className="h-3 w-3" /> Lo que aún te falta
+        </p>
+        <ul className="space-y-1.5">
+          {ev.missing.map((m) => (
+            <li key={m} className="text-sm text-foreground/80 flex items-start gap-2">
+              <span className="text-accent mt-0.5">•</span> {m}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <div className="mb-5">
+      <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+        <Target className="h-3 w-3" /> Próximos 3 pasos
+      </p>
+      <ol className="space-y-2">
+        {ev.nextSteps.map((s, i) => (
+          <li key={i} className="text-sm flex items-start gap-2.5">
+            <span className="shrink-0 h-5 w-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold grid place-items-center mt-0.5">{i + 1}</span>
+            <span>{s}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <Button asChild variant={isPrimary ? "hero" : "outline"} size="sm" className="w-full sm:w-auto">
+      <Link to={`/rutas/${ev.slug}`}>Ver ruta completa <ArrowRight className="h-3.5 w-3.5" /></Link>
+    </Button>
+  </div>
+);
 
 const Results = () => {
   const nav = useNavigate();
@@ -39,40 +115,9 @@ const Results = () => {
     }
     setSaving(true);
     try {
-      // Resolver UUIDs por slug
-      const slugs = [result.primary, ...result.alternatives].filter(Boolean) as RouteSlug[];
-      const { data: routes } = await supabase
-        .from("migration_routes")
-        .select("id, slug")
-        .in("slug", slugs);
-      const idBySlug = new Map(routes?.map((r) => [r.slug, r.id]) ?? []);
-      const primaryId = result.primary ? idBySlug.get(result.primary) : null;
-      const altIds = result.alternatives.map((s) => idBySlug.get(s)).filter(Boolean);
-
       const answers = localStore.getAnswers();
-      if (answers) {
-        await supabase.from("profiles").update({
-          nationality: answers.nationality,
-          current_country: answers.current_country,
-          eu_status: answers.eu_status === "yes",
-          main_goal: answers.main_goal,
-          work_offer: answers.work_offer === "yes",
-          study_admission: answers.study_admission === "yes",
-          family_in_spain: answers.family_in_spain === "yes",
-          timeline_goal: answers.timeline_goal,
-          budget_range: answers.budget_range,
-        }).eq("id", user.id);
-      }
-
-      await supabase.from("assessment_results").insert({
-        profile_id: user.id,
-        primary_route_id: primaryId,
-        alternative_route_ids_json: altIds,
-        preparedness_level: result.preparedness,
-        explanation: result.explanation,
-        missing_requirements_json: result.missing,
-      });
-
+      if (!answers) throw new Error("No hay respuestas guardadas");
+      await persistAssessment(user.id, answers, result);
       toast.success("Diagnóstico guardado en tu dashboard");
       nav("/dashboard");
     } catch (e: any) {
@@ -93,14 +138,15 @@ const Results = () => {
 
   if (!result) return null;
 
-  const prep = PREP_STYLES[result.preparedness];
+  const primaryEval = result.primary ? result.evaluations?.[result.primary] : null;
+  const altEvals = result.alternatives.map((s) => result.evaluations?.[s]).filter(Boolean) as RouteEvaluation[];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SiteHeader />
       <main className="flex-1">
         <section className="bg-gradient-hero border-b border-border/60">
-          <div className="container py-14 lg:py-20 max-w-4xl">
+          <div className="container py-12 lg:py-16 max-w-5xl">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -114,87 +160,66 @@ const Results = () => {
               <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-balance">
                 {result.isEU
                   ? "Tu situación tiene un trato especial"
-                  : result.primary
-                    ? <>Tu mejor camino es <span className="text-primary">{ROUTE_LABEL[result.primary]}</span></>
+                  : primaryEval
+                    ? <>Tu mejor camino es <span className="text-primary">{ROUTE_LABEL[primaryEval.slug]}</span></>
                     : "Aún necesitamos más datos para sugerir una ruta clara"}
               </h1>
-              <Badge variant="outline" className={`${prep.className} text-sm font-medium`}>{prep.label}</Badge>
+              <Badge variant="outline" className="text-sm font-medium">
+                {PREP_LABEL[result.preparedness]}
+              </Badge>
+              <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed pt-2">{result.explanation}</p>
             </motion.div>
           </div>
         </section>
 
-        <div className="container py-12 max-w-4xl space-y-8">
-          {/* Explicación */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="bg-card border border-border rounded-3xl p-7 lg:p-8 shadow-elegant"
-          >
-            <h2 className="font-display text-xl font-semibold mb-3">Por qué esta ruta encaja</h2>
-            <p className="text-muted-foreground leading-relaxed">{result.explanation}</p>
-          </motion.div>
+        <div className="container py-10 lg:py-12 max-w-5xl space-y-8">
+          {/* EU notice */}
+          {result.isEU && (
+            <div className="bg-accent-soft/50 border border-accent/30 rounded-3xl p-6">
+              <p className="text-sm">
+                Como ciudadano UE/EEE/Suiza tu trámite principal es el <strong>registro de ciudadano de la Unión</strong> en la Oficina de Extranjería o Comisaría de Policía correspondiente, sin necesidad de visado nacional.
+              </p>
+            </div>
+          )}
+
+          {/* Ruta principal */}
+          {primaryEval && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+              <RouteCard ev={primaryEval} isPrimary />
+            </motion.div>
+          )}
 
           {/* Alternativas */}
-          {result.alternatives.length > 0 && (
+          {altEvals.length > 0 && (
             <div className="space-y-4">
-              <h2 className="font-display text-xl font-semibold">Rutas alternativas</h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                {result.alternatives.map((slug) => (
-                  <Link
-                    key={slug}
-                    to={`/rutas/${slug}`}
-                    className="group bg-card border border-border rounded-2xl p-5 hover:shadow-elegant hover:border-primary/30 transition-all"
-                  >
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Alternativa</p>
-                    <p className="font-display text-lg font-semibold mb-3">{ROUTE_LABEL[slug]}</p>
-                    <span className="inline-flex items-center gap-1.5 text-sm text-primary group-hover:gap-2.5 transition-all">
-                      Ver detalles <ArrowRight className="h-3.5 w-3.5" />
-                    </span>
-                  </Link>
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-primary" />
+                <h2 className="font-display text-xl font-semibold">Rutas alternativas a considerar</h2>
+              </div>
+              <div className="grid lg:grid-cols-2 gap-5">
+                {altEvals.map((ev) => (
+                  <RouteCard key={ev.slug} ev={ev} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Missing */}
-          {result.missing.length > 0 && (
-            <div className="bg-accent-soft/40 border border-accent/30 rounded-3xl p-7">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="h-9 w-9 rounded-full bg-accent/15 grid place-items-center shrink-0">
-                  <AlertCircle className="h-4.5 w-4.5 text-accent" />
-                </div>
-                <div>
-                  <h2 className="font-display text-lg font-semibold">Lo que aún te falta</h2>
-                  <p className="text-sm text-muted-foreground">Reúne estos elementos para acercarte a tu ruta principal.</p>
-                </div>
-              </div>
-              <ul className="space-y-2.5 ml-12">
-                {result.missing.map((m) => (
-                  <li key={m} className="flex items-start gap-2.5 text-sm">
-                    <Check className="h-4 w-4 text-accent mt-0.5 shrink-0" /> {m}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* CTA */}
+          {/* CTA guardar */}
           <div className="bg-gradient-primary rounded-3xl p-8 lg:p-10 text-primary-foreground relative overflow-hidden">
             <div className="absolute -top-10 -right-10 h-48 w-48 bg-accent/30 rounded-full blur-3xl" />
             <div className="relative space-y-4 max-w-xl">
               <h2 className="font-display text-2xl lg:text-3xl font-semibold">Guarda tu diagnóstico y avanza paso a paso</h2>
               <p className="opacity-85">
-                Crea una cuenta para acceder a tu dashboard con checklist documental, timeline y recursos oficiales personalizados.
+                Crea una cuenta para acceder a tu dashboard con checklist documental, timeline, próximo paso y recursos oficiales personalizados.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-1">
                 <Button variant="accent" size="lg" onClick={saveToAccount} disabled={saving}>
                   <BookmarkPlus className="h-4 w-4" />
                   {saving ? "Guardando…" : user ? "Guardar en mi dashboard" : "Crear cuenta y guardar"}
                 </Button>
-                {result.primary && (
+                {primaryEval && (
                   <Button asChild variant="outline" size="lg" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                    <Link to={`/rutas/${result.primary}`}>Ver detalle de la ruta <ArrowRight className="h-4 w-4" /></Link>
+                    <Link to={`/rutas/${primaryEval.slug}`}>Ver detalle de la ruta <ArrowRight className="h-4 w-4" /></Link>
                   </Button>
                 )}
               </div>
