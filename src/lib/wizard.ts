@@ -28,6 +28,7 @@ export type RouteEvaluation = {
   estimatedTime: string;
   reason: string;
   missing: string[];
+  blockers: string[];
   nextSteps: string[];
 };
 
