@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RequireSubscription } from "@/components/RequireSubscription";
 import Index from "./pages/Index.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Results from "./pages/Results.tsx";
@@ -37,11 +38,13 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/rutas/:slug" element={<RouteDetail />} />
-            <Route path="/recursos" element={<Resources />} />
             <Route path="/precios" element={<Pricing />} />
             <Route path="/checkout/return" element={<CheckoutReturn />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            {/* Premium-gated: requiere trial activo o suscripción */}
+            <Route path="/dashboard" element={<RequireSubscription><Dashboard /></RequireSubscription>} />
+            <Route path="/rutas/:slug" element={<RequireSubscription><RouteDetail /></RequireSubscription>} />
+            <Route path="/recursos" element={<RequireSubscription><Resources /></RequireSubscription>} />
+            {/* Solo requiere login */}
             <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
