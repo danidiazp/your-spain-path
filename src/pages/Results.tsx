@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Check, AlertCircle, Sparkles, BookmarkPlus, Clock, Gauge, Target, ListChecks, ShieldAlert, Shield, FileText, Bell } from "lucide-react";
@@ -118,12 +118,48 @@ const Results = () => {
   const { isActive } = useSubscription();
   const [result, setResult] = useState<Recommendation | null>(null);
   const [saving, setSaving] = useState(false);
+  const [invalidResult, setInvalidResult] = useState(false);
+
+  const isValidRecommendation = (value: unknown): value is Recommendation => {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Partial<Recommendation>;
+    return (
+      typeof candidate.explanation === "string" &&
+      Array.isArray(candidate.alternatives) &&
+      typeof candidate.evaluations === "object" &&
+      candidate.evaluations !== null &&
+      typeof candidate.preparedness === "string" &&
+      Array.isArray(candidate.missing)
+    );
+  };
 
   useEffect(() => {
-    const r = localStore.getResult<Recommendation>();
-    if (!r) nav("/diagnostico");
-    else setResult(r);
+    const r = localStore.getResult<unknown>();
+    if (!r) {
+      nav("/diagnostico", { replace: true });
+      return;
+    }
+
+    if (!isValidRecommendation(r)) {
+      localStore.clear();
+      setInvalidResult(true);
+      return;
+    }
+
+    setResult(r);
   }, [nav]);
+
+  const primaryEval = useMemo(() => {
+    if (!result?.primary) return null;
+    return result.evaluations?.[result.primary] ?? null;
+  }, [result]);
+
+  const altEvals = useMemo(() => {
+    if (!result?.alternatives?.length) return [];
+    return result.alternatives
+      .map((slug) => result.evaluations?.[slug])
+      .filter(Boolean) as RouteEvaluation[];
+  }, [result]);
 
   const saveToAccount = async () => {
     if (!result) return;
@@ -154,10 +190,27 @@ const Results = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, result]);
 
-  if (!result) return null;
+  if (invalidResult) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <SiteHeader />
+        <main className="flex-1 container py-16 max-w-3xl">
+          <div className="rounded-3xl border border-border bg-card p-8 text-center space-y-4 shadow-elegant">
+            <h1 className="font-display text-2xl font-semibold">Necesitamos rehacer tu diagnóstico</h1>
+            <p className="text-muted-foreground">
+              Detectamos un resultado incompleto y lo hemos limpiado para evitar la pantalla de error.
+            </p>
+            <Button asChild variant="hero" size="lg">
+              <Link to="/diagnostico">Volver al diagnóstico</Link>
+            </Button>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
 
-  const primaryEval = result.primary ? result.evaluations?.[result.primary] : null;
-  const altEvals = result.alternatives.map((s) => result.evaluations?.[s]).filter(Boolean) as RouteEvaluation[];
+  if (!result) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
