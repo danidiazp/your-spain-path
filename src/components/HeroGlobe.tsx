@@ -45,12 +45,15 @@ export const HeroGlobe = () => {
   const [size, setSize] = useState({ w: 600, h: 600 });
   const [shouldRender, setShouldRender] = useState<boolean | null>(null);
 
-  // Decide if 3D globe should render: skip on small screens, reduced motion, or no canvas.
+  // Decide if 3D globe should render: skip ONLY on very small screens.
+  // Re-evaluate on resize so navigation between breakpoints works.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const isSmall = window.matchMedia("(max-width: 768px)").matches;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setShouldRender(!isSmall && !reduced);
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => setShouldRender(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
   }, []);
 
   // Lazy import only when we will render
@@ -58,7 +61,10 @@ export const HeroGlobe = () => {
     if (!shouldRender) return;
     let mounted = true;
     // Defer to idle to avoid blocking first paint
-    const load = () => import("react-globe.gl").then((m) => { if (mounted) setGlobeComp(() => m.default); });
+    const load = () =>
+      import("react-globe.gl")
+        .then((m) => { if (mounted) setGlobeComp(() => m.default); })
+        .catch((err) => { console.error("[HeroGlobe] failed to load react-globe.gl", err); });
     if ("requestIdleCallback" in window) (window as any).requestIdleCallback(load, { timeout: 1500 });
     else setTimeout(load, 200);
     return () => { mounted = false; };
