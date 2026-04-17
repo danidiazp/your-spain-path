@@ -61,13 +61,28 @@ const Auth = () => {
           setSignupSent(true);
           return;
         }
+        // Activar trial sin tarjeta automáticamente al crear la cuenta (idempotente).
+        try {
+          await supabase.rpc("start_trial_no_card" as never, { _user_id: data.session.user.id } as never);
+        } catch (e) {
+          console.warn("[auth] no se pudo activar trial automáticamente", e);
+        }
         track("signup_completed");
-        toast.success("Cuenta creada");
+        toast.success("Cuenta creada · 7 días gratis activados");
         const target = saveFlag ? `${redirect}?save=1` : redirect;
         nav(target, { replace: true });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Asegura trial activo para usuarios que se registraron antes de esta lógica.
+        // La función RPC es idempotente y no concede trial si ya tuvo uno o tiene plan de pago.
+        if (data.session) {
+          try {
+            await supabase.rpc("start_trial_no_card" as never, { _user_id: data.session.user.id } as never);
+          } catch (e) {
+            console.warn("[auth] no se pudo asegurar trial al iniciar sesión", e);
+          }
+        }
         track("signin_completed");
         toast.success("Sesión iniciada");
         const target = saveFlag ? `${redirect}?save=1` : redirect;
