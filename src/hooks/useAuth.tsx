@@ -21,17 +21,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1) Listener primero
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
+    // 1) Listener primero — captura signIn, signOut, tokenRefresh, etc.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      // Si el refresh token es inválido o expira, limpiamos sin romper la app
+      if (event === "TOKEN_REFRESHED" && !s) {
+        setSession(null);
+      } else {
+        setSession(s);
+      }
       setLoading(false);
     });
-    // 2) Sesión actual
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setLoading(false);
-    });
-    return () => subscription.unsubscribe();
+    // 2) Sesión actual — atrapamos errores de refresh token corrupto
+    supabase.auth.getSession()
+      .then(({ data: { session: s }, error }) => {
+        if (error) {
+          console.warn("[useAuth] getSession error, clearing local session:", error.message);
+          // Forzar limpieza de tokens corruptos
+          supabase.auth.signOut().catch(() => {});
+          setSession(null);
+        } else {
+          setSession(s);
+        }
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.warn("[useAuth] getSession threw, clearing local session:", e?.message);
+        supabase.auth.signOut().catch(() => {});
+        setSession(null);
+        setLoading(false);
+      });
+
+    // Captura global de errores de refresh token no manejados que llegan a window
+    const onUnhandled = (ev: PromiseRejectionEvent) => {
+      const reason: any = ev.reason;
+      const code = reason?.code || reason?.value?.code;
+      const msg = reason?.message || reason?.value?.message || "";
+      if (code === "refresh_token_not_found" || /Refresh Token/i.test(msg)) {
+        console.warn("[useAuth] swallowed refresh-token error:", msg);
+        ev.preventDefault();
+        supabase.auth.signOut().catch(() => {});
+        setSession(null);
+      }
+    };
+    window.addEventListener("unhandledrejection", onUnhandled);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
   }, []);
 
   const signOut = async () => {
