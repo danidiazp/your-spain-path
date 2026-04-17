@@ -152,12 +152,18 @@ const Onboarding = () => {
       try {
         await persistAssessment(user.id, finalAnswers, result);
       } catch (e: any) {
-        toast.error("No pudimos guardar tu diagnóstico", { description: e.message });
+        // Nunca dejamos que un fallo al guardar bloquee la navegación al
+        // resultado: el resultado vive en localStorage y el usuario podrá
+        // reintentar guardar desde la pantalla de resultados.
+        console.error("[Onboarding] persistAssessment failed", e);
+        toast.error("No pudimos guardar tu diagnóstico", {
+          description: e?.message ?? "Inténtalo de nuevo desde la pantalla de resultados.",
+        });
       } finally {
         setSubmitting(false);
       }
     }
-    nav("/resultados");
+    nav("/resultados", { replace: true });
   };
 
   const handleBack = () => {

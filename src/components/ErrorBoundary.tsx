@@ -2,7 +2,7 @@ import { Component, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; resetKey?: string };
 type State = { hasError: boolean; error: Error | null };
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -15,6 +15,14 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: { componentStack: string }) {
     // eslint-disable-next-line no-console
     console.error("[ErrorBoundary]", error, info.componentStack);
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    // Auto-recovery: si la ruta cambia, reseteamos el estado de error para no
+    // dejar al usuario atrapado en la pantalla de fallback al navegar.
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
   }
 
   reset = () => this.setState({ hasError: false, error: null });
