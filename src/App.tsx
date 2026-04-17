@@ -20,6 +20,7 @@ import Pricing from "./pages/Pricing.tsx";
 import CheckoutReturn from "./pages/CheckoutReturn.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { PaymentTestModeBanner } from "./components/PaymentTestModeBanner";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -31,23 +32,25 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <PaymentTestModeBanner />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/diagnostico" element={<Onboarding />} />
-            <Route path="/resultados" element={<Results />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/precios" element={<Pricing />} />
-            <Route path="/checkout/return" element={<CheckoutReturn />} />
-            {/* Premium-gated: requiere trial activo o suscripción */}
-            <Route path="/dashboard" element={<RequireSubscription><Dashboard /></RequireSubscription>} />
-            <Route path="/rutas/:slug" element={<RequireSubscription><RouteDetail /></RequireSubscription>} />
-            <Route path="/recursos" element={<RequireSubscription><Resources /></RequireSubscription>} />
-            {/* Solo requiere login */}
-            <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/diagnostico" element={<Onboarding />} />
+              <Route path="/resultados" element={<Results />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/precios" element={<Pricing />} />
+              <Route path="/checkout/return" element={<CheckoutReturn />} />
+              {/* Premium-gated: requiere trial activo o suscripción */}
+              <Route path="/dashboard" element={<RequireSubscription><Dashboard /></RequireSubscription>} />
+              <Route path="/rutas/:slug" element={<RequireSubscription><RouteDetail /></RequireSubscription>} />
+              <Route path="/recursos" element={<RequireSubscription><Resources /></RequireSubscription>} />
+              {/* Solo requiere login */}
+              <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
