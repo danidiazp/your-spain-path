@@ -14,6 +14,7 @@ type Step = {
   id: keyof WizardAnswers;
   question: string;
   helper?: string;
+  why?: string;
   type: "text" | "choice";
   options?: { value: string; label: string; desc?: string }[];
   show?: (a: WizardAnswers) => boolean;
