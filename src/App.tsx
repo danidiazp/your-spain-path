@@ -9,6 +9,8 @@ import Index from "./pages/Index.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Results from "./pages/Results.tsx";
 import Auth from "./pages/Auth.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import RouteDetail from "./pages/RouteDetail.tsx";
 import Resources from "./pages/Resources.tsx";
@@ -29,6 +31,8 @@ const App = () => (
             <Route path="/diagnostico" element={<Onboarding />} />
             <Route path="/resultados" element={<Results />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/rutas/:slug" element={<RouteDetail />} />
             <Route path="/recursos" element={<Resources />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
