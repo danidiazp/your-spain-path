@@ -2,13 +2,17 @@
 export type WizardAnswers = {
   nationality?: string;
   current_country?: string;
-  eu_status?: "yes" | "no";
+  eu_status?: "yes" | "no" | "unknown";
   main_goal?: "study" | "work" | "family" | "explore";
-  work_offer?: "yes" | "no";
-  study_admission?: "yes" | "no";
-  family_in_spain?: "yes" | "no";
+  work_offer?: "yes" | "no" | "unknown";
+  study_admission?: "yes" | "no" | "unknown";
+  family_in_spain?: "yes" | "no" | "unknown";
   timeline_goal?: "1-3" | "3-6" | "6-12" | "12+";
-  budget_range?: "low" | "medium" | "high";
+  budget_range?: "low" | "medium" | "high" | "unknown";
+  urgency?: "exploring" | "planning" | "urgent";
+  preferred_language?: "es" | "en" | "fr" | "other";
+  started_process?: "no" | "docs" | "applied" | "in_progress";
+  support_need?: "info" | "tracking" | "full";
 };
 
 export type RouteSlug = "estudios" | "trabajo" | "reagrupacion-familiar";
