@@ -20,10 +20,19 @@ const Profile = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data }) => {
-      setProfile(data ?? {});
-      setLoading(false);
-    });
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+        if (!cancelled) setProfile(data ?? {});
+      } catch (e) {
+        console.error("profile load error", e);
+        if (!cancelled) setProfile({});
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user]);
 
   const save = async () => {

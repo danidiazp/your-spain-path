@@ -15,7 +15,17 @@ const Resources = () => {
   const [q, setQ] = useState("");
 
   useEffect(() => {
-    supabase.from("resources").select("*").order("category").then(({ data }) => setItems((data as Resource[]) ?? []));
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.from("resources").select("*").order("category");
+        if (!cancelled) setItems((data as Resource[]) ?? []);
+      } catch (e) {
+        console.error("resources load error", e);
+        if (!cancelled) setItems([]);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const categories = useMemo(() => ["Todos", ...Array.from(new Set(items.map((i) => i.category)))], [items]);

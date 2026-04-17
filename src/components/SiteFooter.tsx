@@ -1,8 +1,9 @@
+import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "./Logo";
 
-export const SiteFooter = () => (
-  <footer className="border-t border-border/60 mt-24 bg-card/50">
+export const SiteFooter = forwardRef<HTMLElement>((_, ref) => (
+  <footer ref={ref} className="border-t border-border/60 mt-24 bg-card/50">
     <div className="container py-12 grid gap-10 md:grid-cols-4">
       <div className="md:col-span-2 space-y-4">
         <Logo />
@@ -22,6 +23,7 @@ export const SiteFooter = () => (
         <h4 className="font-display text-sm font-semibold mb-3">Plataforma</h4>
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li><Link to="/diagnostico" className="hover:text-foreground">Diagnóstico</Link></li>
+          <li><Link to="/precios" className="hover:text-foreground">Precios</Link></li>
           <li><Link to="/recursos" className="hover:text-foreground">Recursos oficiales</Link></li>
           <li><Link to="/auth" className="hover:text-foreground">Crear cuenta</Link></li>
         </ul>
@@ -34,4 +36,5 @@ export const SiteFooter = () => (
       </div>
     </div>
   </footer>
-);
+));
+SiteFooter.displayName = "SiteFooter";

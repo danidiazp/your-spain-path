@@ -18,12 +18,21 @@ serve(async (req) => {
     console.log("event", event.type, "env", env);
 
     switch (event.type) {
+      case "checkout.session.completed":
+        await handleCheckoutCompleted(event.data.object, env);
+        break;
       case "customer.subscription.created":
       case "customer.subscription.updated":
         await upsertSubscription(event.data.object, env);
         break;
       case "customer.subscription.deleted":
         await markCanceled(event.data.object, env);
+        break;
+      case "invoice.paid":
+        await handleInvoicePaid(event.data.object, env);
+        break;
+      case "invoice.payment_failed":
+        await handleInvoiceFailed(event.data.object, env);
         break;
       default:
         console.log("Unhandled", event.type);
@@ -34,6 +43,18 @@ serve(async (req) => {
     return new Response("Webhook error", { status: 400 });
   }
 });
+
+async function handleCheckoutCompleted(session: any, env: StripeEnv) {
+  const userId = session.metadata?.userId;
+  if (!userId) return;
+  // Vincular customer al usuario antes de que llegue subscription.created
+  await supabase.from("billing_profiles").upsert({
+    user_id: userId,
+    stripe_customer_id: session.customer,
+    selected_pricing_country: session.metadata?.selectedPricingCountry ?? null,
+    subscription_status: "checkout_completed",
+  }, { onConflict: "user_id" });
+}
 
 async function upsertSubscription(sub: any, env: StripeEnv) {
   const userId = sub.metadata?.userId;
@@ -57,7 +78,6 @@ async function upsertSubscription(sub: any, env: StripeEnv) {
     updated_at: new Date().toISOString(),
   }, { onConflict: "stripe_subscription_id" });
 
-  // Actualizar billing_profile con stripe ids + fechas
   await supabase.from("billing_profiles").upsert({
     user_id: userId,
     stripe_customer_id: sub.customer,
@@ -74,4 +94,29 @@ async function markCanceled(sub: any, env: StripeEnv) {
     status: "canceled",
     updated_at: new Date().toISOString(),
   }).eq("stripe_subscription_id", sub.id).eq("environment", env);
+
+  // Reflejar en billing_profile
+  if (sub.metadata?.userId) {
+    await supabase.from("billing_profiles").update({
+      subscription_status: "canceled",
+    }).eq("user_id", sub.metadata.userId);
+  }
+}
+
+async function handleInvoicePaid(invoice: any, env: StripeEnv) {
+  const subId = invoice.subscription;
+  if (!subId) return;
+  await supabase.from("subscriptions").update({
+    status: "active",
+    updated_at: new Date().toISOString(),
+  }).eq("stripe_subscription_id", subId).eq("environment", env);
+}
+
+async function handleInvoiceFailed(invoice: any, env: StripeEnv) {
+  const subId = invoice.subscription;
+  if (!subId) return;
+  await supabase.from("subscriptions").update({
+    status: "past_due",
+    updated_at: new Date().toISOString(),
+  }).eq("stripe_subscription_id", subId).eq("environment", env);
 }
