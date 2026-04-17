@@ -42,13 +42,14 @@ export async function persistAssessment(
   await supabase.from("profiles").update({
     nationality: answers.nationality,
     current_country: answers.current_country,
-    eu_status: answers.eu_status === "yes",
+    eu_status: answers.eu_status === "yes" ? true : answers.eu_status === "no" ? false : null,
     main_goal: answers.main_goal,
-    work_offer: answers.work_offer === "yes",
-    study_admission: answers.study_admission === "yes",
-    family_in_spain: answers.family_in_spain === "yes",
+    work_offer: answers.work_offer === "yes" ? true : answers.work_offer === "no" ? false : null,
+    study_admission: answers.study_admission === "yes" ? true : answers.study_admission === "no" ? false : null,
+    family_in_spain: answers.family_in_spain === "yes" ? true : answers.family_in_spain === "no" ? false : null,
     timeline_goal: answers.timeline_goal,
-    budget_range: answers.budget_range,
+    budget_range: answers.budget_range === "unknown" ? null : answers.budget_range,
+    preferred_language: answers.preferred_language ?? "es",
   }).eq("id", userId);
 
   // Insert assessment
