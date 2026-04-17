@@ -15,7 +15,10 @@ import Dashboard from "./pages/Dashboard.tsx";
 import RouteDetail from "./pages/RouteDetail.tsx";
 import Resources from "./pages/Resources.tsx";
 import Profile from "./pages/Profile.tsx";
+import Pricing from "./pages/Pricing.tsx";
+import CheckoutReturn from "./pages/CheckoutReturn.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { PaymentTestModeBanner } from "./components/PaymentTestModeBanner";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +29,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <PaymentTestModeBanner />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/diagnostico" element={<Onboarding />} />
@@ -35,6 +39,8 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/rutas/:slug" element={<RouteDetail />} />
             <Route path="/recursos" element={<Resources />} />
+            <Route path="/precios" element={<Pricing />} />
+            <Route path="/checkout/return" element={<CheckoutReturn />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

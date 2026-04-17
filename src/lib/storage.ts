@@ -1,34 +1,28 @@
 import type { WizardAnswers, Recommendation } from "./wizard";
+import { isFastTrackNationality } from "./countries";
 import { supabase } from "@/integrations/supabase/client";
 
 const KEY_ANSWERS = "rea_wizard_answers";
 const KEY_RESULT = "rea_wizard_result";
 
 export const localStore = {
-  saveAnswers(a: WizardAnswers) {
-    try { localStorage.setItem(KEY_ANSWERS, JSON.stringify(a)); } catch {}
-  },
+  saveAnswers(a: WizardAnswers) { try { localStorage.setItem(KEY_ANSWERS, JSON.stringify(a)); } catch {} },
   getAnswers(): WizardAnswers | null {
     try { const raw = localStorage.getItem(KEY_ANSWERS); return raw ? JSON.parse(raw) : null; } catch { return null; }
   },
-  saveResult(r: unknown) {
-    try { localStorage.setItem(KEY_RESULT, JSON.stringify(r)); } catch {}
-  },
+  saveResult(r: unknown) { try { localStorage.setItem(KEY_RESULT, JSON.stringify(r)); } catch {} },
   getResult<T = unknown>(): T | null {
     try { const raw = localStorage.getItem(KEY_RESULT); return raw ? JSON.parse(raw) : null; } catch { return null; }
   },
-  clear() {
-    try { localStorage.removeItem(KEY_ANSWERS); localStorage.removeItem(KEY_RESULT); } catch {}
-  },
+  clear() { try { localStorage.removeItem(KEY_ANSWERS); localStorage.removeItem(KEY_RESULT); } catch {} },
 };
 
-/** Persist answers + recommendation into Supabase for an authenticated user. */
 export async function persistAssessment(
   userId: string,
   answers: WizardAnswers,
-  result: Recommendation
+  result: Recommendation,
 ) {
-  // Resolver UUIDs por slug
+  // Resolver UUIDs de rutas por slug
   const slugs = [result.primary, ...result.alternatives].filter(Boolean) as string[];
   const { data: routes } = await supabase
     .from("migration_routes")
@@ -38,18 +32,26 @@ export async function persistAssessment(
   const primaryId = result.primary ? idBySlug.get(result.primary) ?? null : null;
   const altIds = result.alternatives.map((s) => idBySlug.get(s)).filter(Boolean);
 
-  // Update profile
+  const activeNat = answers.active_process_nationality || answers.primary_nationality;
+  const fastTrack = isFastTrackNationality(activeNat);
+
+  // Update profile (campos NUEVOS estructurados + algunos viejos por compatibilidad)
   await supabase.from("profiles").update({
-    nationality: answers.nationality,
-    current_country: answers.current_country,
-    eu_status: answers.eu_status === "yes" ? true : answers.eu_status === "no" ? false : null,
-    main_goal: answers.main_goal,
-    work_offer: answers.work_offer === "yes" ? true : answers.work_offer === "no" ? false : null,
-    study_admission: answers.study_admission === "yes" ? true : answers.study_admission === "no" ? false : null,
-    family_in_spain: answers.family_in_spain === "yes" ? true : answers.family_in_spain === "no" ? false : null,
-    timeline_goal: answers.timeline_goal,
-    budget_range: answers.budget_range === "unknown" ? null : answers.budget_range,
+    birth_country: answers.birth_country,
+    primary_nationality: answers.primary_nationality,
+    has_second_nationality: !!answers.has_second_nationality,
+    second_nationality: answers.has_second_nationality ? (answers.second_nationality ?? null) : null,
+    active_process_nationality: activeNat,
+    eligible_fast_track_nationality: fastTrack,
+    current_residence_country: answers.current_residence_country,
+    currently_in_spain: !!answers.currently_in_spain,
+    current_spain_status: answers.current_spain_status ?? null,
+    intended_route: answers.intended_route,
+    timeline_goal: answers.timeline_goal === "unknown" ? null : answers.timeline_goal,
     preferred_language: answers.preferred_language ?? "es",
+    // Legacy mapping
+    nationality: answers.primary_nationality ?? answers.nationality ?? null,
+    current_country: answers.current_residence_country ?? answers.current_country ?? null,
   }).eq("id", userId);
 
   // Insert assessment
