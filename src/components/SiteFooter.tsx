@@ -1,9 +1,8 @@
-import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "./Logo";
 
-export const SiteFooter = forwardRef<HTMLElement>((_, ref) => (
-  <footer ref={ref} className="border-t border-border/60 mt-24 bg-card/50">
+export const SiteFooter = () => (
+  <footer className="border-t border-border/60 mt-24 bg-card/50">
     <div className="container py-12 grid gap-10 md:grid-cols-4">
       <div className="md:col-span-2 space-y-4">
         <Logo />
@@ -36,5 +35,4 @@ export const SiteFooter = forwardRef<HTMLElement>((_, ref) => (
       </div>
     </div>
   </footer>
-));
-SiteFooter.displayName = "SiteFooter";
+);
