@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, AlertCircle, Sparkles, BookmarkPlus, Clock, Gauge, Target, ListChecks } from "lucide-react";
+import { ArrowRight, Check, AlertCircle, Sparkles, BookmarkPlus, Clock, Gauge, Target, ListChecks, ShieldAlert, Shield, FileText, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -69,6 +69,21 @@ const RouteCard = ({ ev, isPrimary }: { ev: RouteEvaluation; isPrimary?: boolean
           {ev.missing.map((m) => (
             <li key={m} className="text-sm text-foreground/80 flex items-start gap-2">
               <span className="text-accent mt-0.5">•</span> {m}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {ev.blockers.length > 0 && (
+      <div className="mb-5 rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+        <p className="text-xs uppercase tracking-wider text-destructive/90 mb-2 flex items-center gap-1.5 font-semibold">
+          <ShieldAlert className="h-3.5 w-3.5" /> Bloqueos frecuentes a anticipar
+        </p>
+        <ul className="space-y-1.5">
+          {ev.blockers.map((b) => (
+            <li key={b} className="text-sm text-foreground/85 flex items-start gap-2">
+              <span className="text-destructive mt-0.5">!</span> {b}
             </li>
           ))}
         </ul>
