@@ -150,6 +150,26 @@ const Pricing = () => {
       <PaymentTestModeBanner />
       <SiteHeader />
       <main className="flex-1 container py-12 lg:py-16 max-w-5xl">
+        {/* Banner de estado del usuario */}
+        {user && accessSource === "paid" && isActive && (
+          <div className="mb-8 rounded-2xl bg-success/10 border border-success/30 p-4 flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm">
+              <strong>Ya tienes una suscripción activa.</strong> Gestiónala desde tu perfil.
+            </p>
+            <Button asChild variant="hero" size="sm">
+              <a href="/perfil">Ir a mi suscripción <ArrowRight className="h-3.5 w-3.5" /></a>
+            </Button>
+          </div>
+        )}
+        {user && accessSource === "trial_no_card" && (
+          <div className="mb-8 rounded-2xl bg-accent/10 border border-accent/30 p-4 flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm">
+              <Sparkles className="h-4 w-4 text-accent inline-block mr-1" />
+              Ya tienes tu prueba gratis activa. Suscríbete para no perder acceso cuando termine.
+            </p>
+          </div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
