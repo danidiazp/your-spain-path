@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Check } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Button } from "@/components/ui/button";
 import { HeroGlobe } from "@/components/HeroGlobe";
 import { GraduationCap, Briefcase, Users, ShieldCheck, Compass, ListChecks, Map } from "lucide-react";
+import { StartTrialButton } from "@/components/StartTrialButton";
 import { track } from "@/lib/analytics";
 
 const ROUTES_PREVIEW = [
