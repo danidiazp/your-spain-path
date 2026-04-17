@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, AlertCircle, Sparkles, BookmarkPlus, Clock, Gauge, Target, ListChecks } from "lucide-react";
+import { ArrowRight, Check, AlertCircle, Sparkles, BookmarkPlus, Clock, Gauge, Target, ListChecks, ShieldAlert, Shield, FileText, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -69,6 +69,21 @@ const RouteCard = ({ ev, isPrimary }: { ev: RouteEvaluation; isPrimary?: boolean
           {ev.missing.map((m) => (
             <li key={m} className="text-sm text-foreground/80 flex items-start gap-2">
               <span className="text-accent mt-0.5">•</span> {m}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {ev.blockers.length > 0 && (
+      <div className="mb-5 rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+        <p className="text-xs uppercase tracking-wider text-destructive/90 mb-2 flex items-center gap-1.5 font-semibold">
+          <ShieldAlert className="h-3.5 w-3.5" /> Bloqueos frecuentes a anticipar
+        </p>
+        <ul className="space-y-1.5">
+          {ev.blockers.map((b) => (
+            <li key={b} className="text-sm text-foreground/85 flex items-start gap-2">
+              <span className="text-destructive mt-0.5">!</span> {b}
             </li>
           ))}
         </ul>
@@ -206,23 +221,50 @@ const Results = () => {
 
           {/* CTA guardar */}
           <div className="bg-gradient-primary rounded-3xl p-8 lg:p-10 text-primary-foreground relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 h-48 w-48 bg-accent/30 rounded-full blur-3xl" />
-            <div className="relative space-y-4 max-w-xl">
-              <h2 className="font-display text-2xl lg:text-3xl font-semibold">Guarda tu diagnóstico y avanza paso a paso</h2>
-              <p className="opacity-85">
-                Crea una cuenta para acceder a tu dashboard con checklist documental, timeline, próximo paso y recursos oficiales personalizados.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                <Button variant="accent" size="lg" onClick={saveToAccount} disabled={saving}>
-                  <BookmarkPlus className="h-4 w-4" />
-                  {saving ? "Guardando…" : user ? "Guardar en mi dashboard" : "Crear cuenta y guardar"}
-                </Button>
-                {primaryEval && (
-                  <Button asChild variant="outline" size="lg" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                    <Link to={`/rutas/${primaryEval.slug}`}>Ver detalle de la ruta <ArrowRight className="h-4 w-4" /></Link>
+            <div className="absolute -top-10 -right-10 h-56 w-56 bg-accent/30 rounded-full blur-3xl" />
+            <div className="absolute -bottom-16 -left-10 h-56 w-56 bg-primary-foreground/10 rounded-full blur-3xl" />
+            <div className="relative grid lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-foreground/15 text-xs font-medium backdrop-blur">
+                  <Sparkles className="h-3 w-3" /> Tu plan personalizado te espera
+                </div>
+                <h2 className="font-display text-2xl lg:text-3xl font-semibold leading-tight">
+                  No pierdas este diagnóstico. Guárdalo y avanza con orden.
+                </h2>
+                <p className="opacity-90 text-sm lg:text-base">
+                  Tu cuenta es gratuita y guarda de forma segura tu progreso, documentos y próximos pasos. Podrás retomar tu plan desde cualquier dispositivo.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Button variant="accent" size="lg" onClick={saveToAccount} disabled={saving}>
+                    <BookmarkPlus className="h-4 w-4" />
+                    {saving ? "Guardando…" : user ? "Guardar en mi dashboard" : "Crear cuenta gratis y guardar"}
                   </Button>
-                )}
+                  {primaryEval && (
+                    <Button asChild variant="outline" size="lg" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
+                      <Link to={`/rutas/${primaryEval.slug}`}>Ver detalle de la ruta <ArrowRight className="h-4 w-4" /></Link>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs opacity-70 pt-1">Sin tarjeta. Sin compromiso. Cancelas cuando quieras.</p>
               </div>
+              <ul className="space-y-3 lg:border-l lg:border-primary-foreground/20 lg:pl-8">
+                <li className="flex items-start gap-3 text-sm">
+                  <div className="shrink-0 h-8 w-8 rounded-xl bg-primary-foreground/15 grid place-items-center"><FileText className="h-4 w-4" /></div>
+                  <div><p className="font-medium">Checklist documental</p><p className="opacity-75 text-xs">Documentos exactos para tu ruta, con apostillas y traducciones.</p></div>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <div className="shrink-0 h-8 w-8 rounded-xl bg-primary-foreground/15 grid place-items-center"><Target className="h-4 w-4" /></div>
+                  <div><p className="font-medium">Próximo mejor paso</p><p className="opacity-75 text-xs">Siempre sabrás qué hacer ahora y por qué importa.</p></div>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <div className="shrink-0 h-8 w-8 rounded-xl bg-primary-foreground/15 grid place-items-center"><Bell className="h-4 w-4" /></div>
+                  <div><p className="font-medium">Recordatorios y progreso</p><p className="opacity-75 text-xs">Tareas con fecha, % de avance y alertas de bloqueos.</p></div>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <div className="shrink-0 h-8 w-8 rounded-xl bg-primary-foreground/15 grid place-items-center"><Shield className="h-4 w-4" /></div>
+                  <div><p className="font-medium">Datos seguros</p><p className="opacity-75 text-xs">Tu información se guarda cifrada y solo tú la ves.</p></div>
+                </li>
+              </ul>
             </div>
           </div>
 

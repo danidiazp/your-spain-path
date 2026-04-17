@@ -2,13 +2,17 @@
 export type WizardAnswers = {
   nationality?: string;
   current_country?: string;
-  eu_status?: "yes" | "no";
+  eu_status?: "yes" | "no" | "unknown";
   main_goal?: "study" | "work" | "family" | "explore";
-  work_offer?: "yes" | "no";
-  study_admission?: "yes" | "no";
-  family_in_spain?: "yes" | "no";
+  work_offer?: "yes" | "no" | "unknown";
+  study_admission?: "yes" | "no" | "unknown";
+  family_in_spain?: "yes" | "no" | "unknown";
   timeline_goal?: "1-3" | "3-6" | "6-12" | "12+";
-  budget_range?: "low" | "medium" | "high";
+  budget_range?: "low" | "medium" | "high" | "unknown";
+  urgency?: "exploring" | "planning" | "urgent";
+  preferred_language?: "es" | "en" | "fr" | "other";
+  started_process?: "no" | "docs" | "applied" | "in_progress";
+  support_need?: "info" | "tracking" | "full";
 };
 
 export type RouteSlug = "estudios" | "trabajo" | "reagrupacion-familiar";
@@ -24,6 +28,7 @@ export type RouteEvaluation = {
   estimatedTime: string;
   reason: string;
   missing: string[];
+  blockers: string[];
   nextSteps: string[];
 };
 
@@ -75,56 +80,73 @@ const ROUTE_DEFAULTS: Record<RouteSlug, { time: string; difficulty: Difficulty; 
 
 export function evaluate(a: WizardAnswers): Record<RouteSlug, RouteEvaluation> {
   const ev: Record<RouteSlug, RouteEvaluation> = {} as any;
+  const urgent = a.urgency === "urgent" || a.timeline_goal === "1-3";
 
   // ESTUDIOS
   {
     let score = 0;
     const missing: string[] = [];
+    const blockers: string[] = [];
     const reasons: string[] = [];
     if (a.study_admission === "yes") { score += 60; reasons.push("ya cuentas con admisión académica en España"); }
     else if (a.main_goal === "study") { score += 25; missing.push("Carta de admisión de un centro educativo español"); reasons.push("tu objetivo es estudiar pero falta confirmar la admisión"); }
     else if (a.main_goal === "explore") { score += 8; }
-    if (a.budget_range === "low") missing.push("Acreditación de medios económicos suficientes (IPREM mensual)");
-    if (a.timeline_goal === "1-3") score -= 5;
+    if (a.study_admission === "unknown") missing.push("Confirmar si has solicitado admisión académica");
+    if (a.budget_range === "low") {
+      missing.push("Acreditación de medios económicos suficientes (IPREM mensual)");
+      blockers.push("Falta de medios económicos: el consulado puede denegar el visado si no se acredita ~600 €/mes (IPREM)");
+    }
+    if (urgent) blockers.push("Plazos cortos: la cita consular puede tardar varias semanas según país");
+    if (a.started_process === "no") missing.push("Iniciar la búsqueda de centro educativo y solicitud de admisión");
     if (!a.nationality) missing.push("Confirmar nacionalidad para validar requisitos consulares");
-    ev.estudios = mkEval("estudios", score, missing, reasons.join(" y ") || "encaja parcialmente con tu perfil", a);
+    ev.estudios = mkEval("estudios", score, missing, blockers, reasons.join(" y ") || "encaja parcialmente con tu perfil");
   }
 
   // TRABAJO
   {
     let score = 0;
     const missing: string[] = [];
+    const blockers: string[] = [];
     const reasons: string[] = [];
     if (a.work_offer === "yes") { score += 60; reasons.push("tienes una oferta firme que activa el procedimiento"); }
     else if (a.main_goal === "work") { score += 25; missing.push("Oferta de trabajo firme de un empleador en España"); reasons.push("tu objetivo es laboral pero aún sin oferta"); }
     else if (a.main_goal === "explore") { score += 8; }
+    if (a.work_offer === "unknown") missing.push("Aclarar si ya hay un empleador interesado");
+    if (a.work_offer !== "yes") {
+      blockers.push("Sin oferta firme no se puede iniciar la autorización (la solicita el empleador)");
+    }
     if (a.budget_range === "low") missing.push("Tasas y trámites pueden requerir presupuesto medio");
-    if (a.timeline_goal === "1-3") score -= 10;
-    ev.trabajo = mkEval("trabajo", score, missing, reasons.join(" y ") || "encaja parcialmente con tu perfil", a);
+    if (urgent) blockers.push("Resolución de la autorización puede tardar 3-8 meses según comunidad autónoma");
+    ev.trabajo = mkEval("trabajo", score, missing, blockers, reasons.join(" y ") || "encaja parcialmente con tu perfil");
   }
 
   // REAGRUPACIÓN
   {
     let score = 0;
     const missing: string[] = [];
+    const blockers: string[] = [];
     const reasons: string[] = [];
     if (a.family_in_spain === "yes") { score += 55; reasons.push("tienes familiar directo residiendo legalmente en España"); }
     else if (a.main_goal === "family") { score += 20; missing.push("Familiar directo residiendo legalmente en España"); reasons.push("buscas reunirte con familia pero el familiar aún no reside legalmente"); }
     else if (a.main_goal === "explore") { score += 5; }
-    if (a.timeline_goal === "1-3") score -= 15;
-    ev["reagrupacion-familiar"] = mkEval("reagrupacion-familiar", score, missing, reasons.join(" y ") || "encaja parcialmente con tu perfil", a);
+    if (a.family_in_spain === "unknown") missing.push("Confirmar situación legal del familiar en España");
+    if (a.family_in_spain !== "yes") {
+      blockers.push("El familiar reagrupante debe acreditar al menos 1 año de residencia legal en España (renovada por otro año)");
+    }
+    blockers.push("Se exige acreditar vivienda adecuada (informe de habitabilidad) y medios económicos suficientes");
+    if (urgent) blockers.push("La resolución puede tardar 4-9 meses; no es una vía rápida");
+    ev["reagrupacion-familiar"] = mkEval("reagrupacion-familiar", score, missing, blockers, reasons.join(" y ") || "encaja parcialmente con tu perfil");
   }
 
   return ev;
 }
 
-function mkEval(slug: RouteSlug, score: number, missing: string[], reason: string, a: WizardAnswers): RouteEvaluation {
+function mkEval(slug: RouteSlug, score: number, missing: string[], blockers: string[], reason: string): RouteEvaluation {
   const def = ROUTE_DEFAULTS[slug];
   let viability: Viability = "baja";
   if (score >= 55) viability = "alta";
   else if (score >= 25) viability = "media";
 
-  // next steps: si faltan cosas, las primeras como acción; si no, baseSteps
   const nextSteps = missing.length > 0
     ? [...missing.slice(0, 2), def.baseSteps[0]].slice(0, 3)
     : def.baseSteps.slice(0, 3);
@@ -137,6 +159,7 @@ function mkEval(slug: RouteSlug, score: number, missing: string[], reason: strin
     estimatedTime: def.time,
     reason,
     missing,
+    blockers,
     nextSteps,
   };
 }

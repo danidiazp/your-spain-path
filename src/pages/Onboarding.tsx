@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -14,6 +14,7 @@ type Step = {
   id: keyof WizardAnswers;
   question: string;
   helper?: string;
+  why?: string;
   type: "text" | "choice";
   options?: { value: string; label: string; desc?: string }[];
   show?: (a: WizardAnswers) => boolean;
@@ -146,6 +147,12 @@ const Onboarding = () => {
                 {step.question}
               </h1>
               {step.helper && <p className="text-muted-foreground">{step.helper}</p>}
+              {step.why && (
+                <div className="inline-flex items-start gap-2 px-3 py-2 rounded-xl bg-secondary/60 border border-border/60 text-xs text-muted-foreground max-w-prose">
+                  <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary/70" />
+                  <span><span className="font-medium text-foreground/80">Por qué te lo preguntamos: </span>{step.why}</span>
+                </div>
+              )}
             </div>
 
             {step.type === "text" ? (
